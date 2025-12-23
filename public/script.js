@@ -1,9 +1,8 @@
-// ⚠️ Pastikan Port 8080 (sesuaikan jika beda)
-const API_URL = 'http://localhost:8080/api/lockers';
-const MASTER_API_URL = 'http://localhost:8080/api/masters';
-const API_CHECK = 'http://localhost:8080/api/masters/check-locker';
-const API_ACQUIRE = 'http://localhost:8080/api/masters/save-locker';
-
+// ✅ GUNAKAN RELATIVE PATH (Agar otomatis menyesuaikan server Vercel)
+const API_URL = '/api/lockers';
+const MASTER_API_URL = '/api/masters';
+const API_CHECK = '/api/masters/check-locker';
+const API_ACQUIRE = '/api/masters/save-locker';
 // --- DOM Elements ---
 const lockerTableBody = document.getElementById('lockerTableBody');
 const lockerForm = document.getElementById('lockerForm');
