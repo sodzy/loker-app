@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Manajemen Gudang</title>
+    <link rel="stylesheet" href="style.css"> 
+    <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs@gh-pages/qrcode.min.js"></script>
+</head>
+<body>
+
+    <div class="main-wrapper">
+        <!-- SIDEBAR -->
+        <aside class="left-sidebar">
+            <div class="sidebar-header">
+                <h1>TDD GUDANG</h1>
+                <p>Aplikasi Manajemen Aset</p>
+            </div>
+            <div class="form-section-header">
+                <h3>Input Barang</h3>
+                <button type="button" id="addMasterButton" onclick="openMasterModal()" class="btn-master">Master Data</button>
+            </div>
+            <form id="lockerForm" class="loker-form">
+                <div class="form-group">
+                    <label>Nama Pemilik</label>
+                    <select id="ownerName" name="ownerName" required><option value="" disabled selected>Pilih...</option></select>
+                </div> 
+                <div class="form-group">
+                    <label>Pilih Lokasi (Loker/Rak)</label>
+                    <select id="lockerNumber" required><option value="" disabled selected>Pilih...</option></select>
+                    <!-- hiddenTypeInput mempertahankan tipe lokasi (di-update oleh JS) -->
+                    <input type="hidden" id="selectedLocationType" value="Locker">
+                </div>
+
+                <!-- INPUT INDEX KHUSUS RAK -->
+                <div class="form-group" id="indexInputGroup" style="display:none;">
+                    <label>Index Berkas (Khusus Rak)</label>
+                    <input type="number" id="indexNumber" placeholder="Masukkan nomor index (misal: 1)">
+                </div>
+
+                <div class="form-group"><label>Nama Barang</label><input type="text" id="itemName" required></div>
+                <div class="form-group"><label>Tgl Masuk</label><input type="date" id="entryDate" required></div>
+                <div class="form-group"><label>Tgl Exp</label><input type="date" id="expirationDate" required></div>
+                <div class="form-group"><label>Keterangan</label><textarea id="keterangan" rows="2"></textarea></div>
+                <div class="button-group-vertical">
+                    <button type="submit" id="submitButton" class="btn-submit">Simpan Data</button>
+                    <button type="button" id="cancelButton" class="btn btn-secondary" style="width:100%; margin-top:5px;">Reset</button>
+                </div>
+            </form>
+        </aside>
+
+        <!-- KONTEN KANAN -->
+        <main class="right-content">
+            <div id="customAlert" class="custom-alert">Siap...</div>
+            
+            <!-- TAB NAVIGASI -->
+            <div class="tab-container">
+                <button class="tab-btn active" onclick="switchTab('Locker')" id="tabLocker">📂 Direktori LOKER</button>
+                <button class="tab-btn" onclick="switchTab('Rack')" id="tabRack">🗄️ Direktori RAK</button>
+            </div>
+
+            <div class="content-area">
+                <h2 id="directoryTitle">Loker Directory</h2>
+
+                <div class="search-bar-container">
+                    <input type="text" id="searchInput" class="search-input" placeholder="Cari..." autocomplete="off">
+                    
+                    <select id="filterStatus" class="filter-select">
+                        <option value="">Semua Status</option><option value="Active">Active</option><option value="Expired">Expired</option>
+                        <option value="Dipinjam">Dipinjam</option><option value="Kalibrasi">Kalibrasi</option><option value="Rusak">Rusak</option>
+                    </select>
+                    
+                    <select id="filterOwner" class="filter-select"><option value="">Semua Pemilik</option></select>
+                    
+                    <div style="display: flex; gap: 5px;">
+                        <button type="button" id="exportButton" style="background:#1d6f42; color:white; border:none; padding:10px; border-radius:5px; cursor:pointer;">Export Loker</button>
+                        <button type="button" id="copyAllPromptBtn" style="background:#2980b9; color:white; border:none; padding:10px; border-radius:5px; cursor:pointer;">🤖 AI Loker</button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="loker-table"> 
+                        <thead>
+                          <tr>
+                            <th>ID</th>
+                            <th>Tipe</th>
+                            <th>Kode</th>
+                            <th>Pemilik</th>
+                            <th style="width:30%;">Barang</th>
+                            <th>Masuk</th>
+                            <th>Exp</th>
+                           <th class="index-header">Index</th>
+                            <th>Status</th>
+                            <th>Aksi</th>
+                          </tr>
+                        </thead>
+                        <tbody id="lockerTableBody"><tr><td colspan="10" class="text-center">Loading...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div> 
+    
+    <!-- MODAL EDIT -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeEditModal()">&times;</span>
+            <h3>Edit Data</h3>
+            <form id="editLockerForm">
+                <input type="hidden" id="editId">
+                <div class="form-group"><label>Pemilik</label><select id="editOwnerName" required></select></div> 
+                <div class="form-group"><label>Lokasi</label><select id="editLockerNumber" required></select></div>
+
+                <!-- EDIT INDEX (muncul jika lokasi edit adalah RAK) -->
+                <div class="form-group" id="editIndexGroup" style="display:none;">
+                    <label>Index Berkas (Khusus Rak)</label>
+                    <input type="number" id="editIndexNumber" placeholder="Masukkan nomor index">
+                </div>
+
+                <div class="form-group"><label>Barang</label><input type="text" id="editItemName" required></div>
+                <div style="display:flex;gap:10px;">
+                    <div class="form-group" style="flex:1"><label>Masuk</label><input type="date" id="editEntryDate" required></div>
+                    <div class="form-group" style="flex:1"><label>Exp</label><input type="date" id="editExpirationDate" required></div>
+                </div>
+                <div style="background:#f0f8ff; padding:10px; border-radius:5px; margin:10px 0;">
+                    <div class="form-group"><label style="color:#2980b9;">Status</label>
+                        <select id="editStatusSelect">
+                            <option value="Auto">Auto</option><option value="Dipinjam">Dipinjam</option>
+                            <option value="Kalibrasi">Kalibrasi</option><option value="Rusak">Rusak</option>
+                        </select>
+                    </div>
+                    <div id="editStatusDetailBox" class="form-group" style="display:none;">
+                        <label id="editStatusLabel">Ket:</label><input type="text" id="editManualNote">
+                    </div>
+                </div>
+                <div class="form-group"><label>Note</label><textarea id="editKeterangan" rows="2"></textarea></div>
+                <div class="button-group"><button type="button" class="btn btn-secondary" onclick="closeEditModal()">Batal</button><button type="submit" class="btn btn-primary">Simpan</button></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL MASTER -->
+    <div id="masterModal" class="modal">
+        <div class="modal-content" style="max-width:650px;">
+            <span class="close-button" onclick="closeMasterModal()">&times;</span>
+            <h3>Manajemen Master Data</h3>
+            <div style="display:flex; gap:20px;">
+                <div style="flex:1; border-right:1px solid #eee; padding-right:10px;">
+                    <h4 style="color:#3498db;">1. Pemilik</h4>
+                    <div style="display:flex; gap:5px; margin-bottom:10px;">
+                        <input type="text" id="newOwnerInput" placeholder="Nama Baru" style="padding:5px;">
+                        <button class="btn-sm" id="addMasterOwnerBtn" style="background:#2ecc71;">+</button>
+                    </div>
+                    <ul id="masterOwnerList" class="master-list" style="height:250px;"></ul>
+                </div>
+                <div style="flex:1; padding-left:10px;">
+                    <h4 style="color:#3498db;">2. Lokasi (Loker/Rak)</h4>
+                    <div style="background:#f9f9f9; padding:10px; border-radius:5px; margin-bottom:10px;">
+                        <div style="display:flex; gap:5px; margin-bottom:5px;">
+                            <select id="newLocationType" style="width:40%; padding:5px;">
+                                <option value="Locker">Loker</option><option value="Rack">Rak</option>
+                            </select>
+                            <input type="text" id="newLockerInput" placeholder="Nomor (1, 2..)" style="width:60%; padding:5px;">
+                        </div>
+                        <select id="assignOwnerSelect" style="width:100%; padding:5px; margin-bottom:5px;"><option value="">- Pilih Pemilik -</option></select>
+                        <button class="btn-sm" id="addOrAcquireLockerBtn" style="background:#3498db; width:100%;">Simpan Lokasi</button>
+                    </div>
+                    <ul id="masterLockerList" class="master-list" style="height:130px;"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="printArea" class="print-area"></div>
+    <script src="script.js"></script>
+</body>
+</html>
